@@ -3,7 +3,20 @@ import argparse
 import glob
 import os
 
-from bin.io import load_counts, save_report
+
+def load_counts(filename):
+	with open(filename, "r") as count_file:
+		counts = [line.split('\t') for line in count_file.read().splitlines()][0]
+	return counts
+
+
+def save_report(filename, report):
+	"""
+	Save output report to a .tsv with given filename.
+	"""
+	with open(filename, "w") as output_file:
+		for line in report:
+			output_file.write("{}\n".format("\t".join(line)))
 
 
 def get_report(input_files):

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # USAGE: bash run_pipeline.sh
 
-# 01. Digest
 mkdir -p data
+
+# 01. Digest
 bin/01_digest_protein.py fasta/KLF4.fasta data/KLF4.peptides.txt
 bin/01_digest_protein.py fasta/MYC.fasta data/MYC.peptides.txt
 bin/01_digest_protein.py fasta/PO5F1.fasta data/PO5F1.peptides.txt
@@ -31,5 +32,5 @@ bin/03b_get_report.py data/KLF4.count.tsv \
 rm -rf results
 mkdir results
 cp data/*plot.png data/protein_report.tsv results/
-tar -czf results.tgz results
+tar -czf data/results.tgz results
 rm -r results
