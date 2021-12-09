@@ -3,7 +3,11 @@ import argparse
 
 import matplotlib.pyplot as plt
 
-from bin.io import load_counts
+
+def load_counts(filename):
+	with open(filename, "r") as count_file:
+		counts = [line.split('\t') for line in count_file.read().splitlines()][0]
+	return counts
 
 
 def plot_counts(counts):
