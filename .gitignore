@@ -1,0 +1,10 @@
+.DS_Store
+
+peptides/
+counts/
+fig/
+reports/
+
+.nextflow/
+.nextflow.log
+work/
