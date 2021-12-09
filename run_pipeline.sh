@@ -29,6 +29,6 @@ bin/03b_get_report.py counts/ reports/protein_report.tsv
 # 04. Archive the results in a tarball so we can share them with a colleague
 rm -rf results
 mkdir results
-mv plots/* reports/protein_report.tsv results/
+cp plots/* reports/protein_report.tsv results/
 tar -czf results.tgz results
 rm -r results
