@@ -1,0 +1,3 @@
+Protein	Target Amino Acid	No. of Peptides	No. of Peptides w/ Target Amino Acid	Total No. of Amino Acids	No. of Target Amino Acid
+MYC	C	30	9	439	10
+KLF4	C	32	9	513	14
