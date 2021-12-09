@@ -2,33 +2,34 @@
 # USAGE: bash run_pipeline.sh
 
 # 01. Digest
-mkdir -p peptides
-bin/01_digest_protein.py fasta/KLF4.fasta peptides/KLF4.txt
-bin/01_digest_protein.py fasta/MYC.fasta peptides/MYC.txt
-bin/01_digest_protein.py fasta/PO5F1.fasta peptides/PO5F1.txt
-bin/01_digest_protein.py fasta/SOX2.fasta peptides/SOX2.txt
+mkdir -p data
+bin/01_digest_protein.py fasta/KLF4.fasta data/KLF4.peptides.txt
+bin/01_digest_protein.py fasta/MYC.fasta data/MYC.peptides.txt
+bin/01_digest_protein.py fasta/PO5F1.fasta data/PO5F1.peptides.txt
+bin/01_digest_protein.py fasta/SOX2.fasta data/SOX2.peptides.txt
 
 # 02. Count
-mkdir -p counts
-bin/02_count_amino_acids.py fasta/KLF4.fasta peptides/KLF4.txt counts/KLF4.tsv
-bin/02_count_amino_acids.py fasta/MYC.fasta peptides/MYC.txt counts/MYC.tsv
-bin/02_count_amino_acids.py fasta/PO5F1.fasta peptides/PO5F1.txt counts/PO5F1.tsv
-bin/02_count_amino_acids.py fasta/SOX2.fasta peptides/SOX2.txt counts/SOX2.tsv
+bin/02_count_amino_acids.py fasta/KLF4.fasta data/KLF4.peptides.txt data/KLF4.count.tsv
+bin/02_count_amino_acids.py fasta/MYC.fasta data/MYC.peptides.txt data/MYC.count.tsv
+bin/02_count_amino_acids.py fasta/PO5F1.fasta data/PO5F1.peptides.txt data/PO5F1.count.tsv
+bin/02_count_amino_acids.py fasta/SOX2.fasta data/SOX2.peptides.txt data/SOX2.count.tsv
 
 # 03a. Plot
-mkdir -p plots
-bin/03a_plot_count.py counts/KLF4.tsv plots/KLF4.png
-bin/03a_plot_count.py counts/MYC.tsv plots/MYC.png
-bin/03a_plot_count.py counts/PO5F1.tsv plots/PO5F1.png
-bin/03a_plot_count.py counts/SOX2.tsv plots/SOX2.png
+bin/03a_plot_count.py data/KLF4.count.tsv data/KLF4.plot.png
+bin/03a_plot_count.py data/MYC.count.tsv data/MYC.plot.png
+bin/03a_plot_count.py data/PO5F1.count.tsv data/PO5F1.plot.png
+bin/03a_plot_count.py data/SOX2.count.tsv data/SOX2.plot.png
 
 # 03b. Generate Report
-mkdir -p reports
-bin/03b_get_report.py counts/ reports/protein_report.tsv
+bin/03b_get_report.py data/KLF4.count.tsv \
+					  data/MYC.count.tsv \
+					  data/PO5F1.count.tsv \
+					  data/SOX2.count.tsv \
+					  --output_file=data/protein_report.tsv
 
 # 04. Archive the results in a tarball so we can share them with a colleague
 rm -rf results
 mkdir results
-mv plots/* reports/protein_report.tsv results/
+cp data/*plot.png data/protein_report.tsv results/
 tar -czf results.tgz results
 rm -r results
