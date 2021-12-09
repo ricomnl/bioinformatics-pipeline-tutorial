@@ -21,16 +21,15 @@ def get_report(input_files):
 	for input_file in input_files:
 		counts = load_counts(input_file)
 		count_list.append(
-			[os.path.splitext(os.path.basename(input_file))[0],] + counts
+			[os.path.basename(input_file).split('.')[0],] + counts
 		)
 	return count_list
 
 
-def main(input_folder, output_file):
+def main(input_files, output_file):
 	"""
 	Get a list of input files from a given folder and create a report.
 	"""
-	input_files = glob.glob("{}/*.tsv".format(input_folder))
 	report = get_report(input_files)
 	save_report(output_file, report)
 
@@ -38,15 +37,16 @@ def main(input_folder, output_file):
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument(
-		"input_folder", 
-		help="A folder of .tsv files containing the peptide counts."
+		"input_files",
+		nargs="+",
+		help="A list of .tsv files containing the peptide counts."
 	)
 	parser.add_argument(
-		"output_file", 
+		"--output_file", 
 		help="A .tsv output file to write the report to."
 	)
 	kwargs = {k:v for k,v in vars(parser.parse_args()).items() if v}
-	input_folder = kwargs.pop("input_folder")
+	input_files = kwargs.pop("input_files")
 	output_file = kwargs.pop("output_file")
-	main(input_folder, output_file)
+	main(input_files, output_file)
 	
