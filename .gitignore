@@ -3,3 +3,7 @@
 
 data/
 results.tgz
+
+.nextflow/
+.nextflow.log*
+work/
