@@ -1,5 +1,5 @@
 """workflow.py"""
-from pathlib import Path
+import os
 import re
 import tarfile
 from typing import List, Tuple
@@ -7,9 +7,11 @@ from typing import List, Tuple
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from redun import task, File
+from redun.file import glob_file
 
 
 redun_namespace = "bioinformatics_pipeline_tutorial"
+EXECUTOR = "default"
 
 
 def load_fasta(input_file: File) -> Tuple[str, str]:
@@ -101,8 +103,11 @@ def plot_counts(filename: str, counts: List[str]) -> File:
         title_text="{}'s in Peptides and Amino Acids".format(amino_acid),
         showlegend=False,
     )
-    output_file = File(filename)
-    fig.write_image(filename)
+    # If our filename is an S3 path, plotly can't write to it. As a workaround,
+    # we write to a temporary file and copy its content to the output file.
+    tmp_file = File(os.path.basename(filename))
+    fig.write_image(tmp_file.path)
+    output_file = tmp_file.copy_to(File(filename))
     return output_file
 
 
@@ -126,9 +131,6 @@ def digest_protein(
 ) -> List[str]:
     """
     Digest a protein into peptides using a given enzyme. Defaults to trypsin.
-    All the code is taken from https://github.com/wfondrie/mokapot/blob/master/mokapot/parsers/fasta.py.
-    The only reason why I didn't use mokapot as a package is because I wanted to leave
-    any packaging out of this tutorial.
     """
     # Find the cleavage sites
     enzyme_regex = re.compile(enzyme_regex)
@@ -202,14 +204,14 @@ def get_report(input_files: List[File]) -> List[List[str]]:
         counts = load_counts(input_file)
         count_list.append(
             [
-                Path(input_file.path).stem.split(".")[0],
+                input_file.basename().split(".")[0],
             ]
             + counts
         )
     return count_list
 
 
-@task(version="1")
+@task(version="1", executor=EXECUTOR)
 def digest_protein_task(
     input_fasta: File,
     enzyme_regex: str = "[KR]",
@@ -225,13 +227,15 @@ def digest_protein_task(
         min_length=min_length,
         max_length=max_length,
     )
-    protein = Path(input_fasta.path).stem
-    output_path = Path("data").joinpath(f"{protein}.peptides.txt")
-    peptides_file = save_peptides(str(output_path), peptides)
+    protein = input_fasta.basename().split(".")[0]
+    output_path = os.path.join(
+        os.path.split(input_fasta.dirname())[0], "data", f"{protein}.peptides.txt"
+    )
+    peptides_file = save_peptides(output_path, peptides)
     return peptides_file
 
 
-@task(version="1")
+@task(version="1", executor=EXECUTOR)
 def count_amino_acids_task(
     input_fasta: File, input_peptides: File, amino_acid: str = "C"
 ) -> File:
@@ -245,10 +249,12 @@ def count_amino_acids_task(
     n_peptides_with_aa = num_peptides_with_aa(peptides, amino_acid=amino_acid)
     total_aa_in_protein = total_num_aa_in_protein(protein_sequence)
     aa_in_protein = num_aa_in_protein(protein_sequence, amino_acid=amino_acid)
-    protein = Path(input_fasta.path).stem
-    output_path = Path("data").joinpath(f"{protein}.count.tsv")
+    protein = input_fasta.basename().split(".")[0]
+    output_path = os.path.join(
+        os.path.split(input_fasta.dirname())[0], "data", f"{protein}.count.tsv"
+    )
     aa_count_file = save_counts(
-        str(output_path),
+        output_path,
         [
             amino_acid,
             n_peptides,
@@ -260,49 +266,57 @@ def count_amino_acids_task(
     return aa_count_file
 
 
-@task(version="1")
+@task(version="1", executor=EXECUTOR)
 def plot_count_task(input_count: File) -> File:
     """
     Load the calculated counts and create a plot.
     """
     counts = load_counts(input_count)
-    protein = Path(input_count.path).stem
-    output_path = Path("data").joinpath(f"{protein}.plot.png")
-    counts_plot = plot_counts(str(output_path), counts)
+    protein = input_count.basename().split(".")[0]
+    output_path = os.path.join(
+        os.path.split(input_count.dirname())[0], "data", f"{protein}.plot.png"
+    )
+    counts_plot = plot_counts(output_path, counts)
     return counts_plot
 
 
-@task(version="1")
+@task(version="1", executor=EXECUTOR)
 def get_report_task(input_counts: List[File]) -> File:
     """
     Get a list of input files from a given folder and create a report.
     """
     report = get_report(input_counts)
-    output_path = Path("data").joinpath("protein_report.tsv")
-    report_file = save_report(str(output_path), report)
+    output_path = os.path.join(
+        os.path.split(input_counts[0].dirname())[0], "data", f"protein_report.tsv"
+    )
+    report_file = save_report(output_path, report)
     return report_file
 
 
-@task(version="1")
+@task(version="1", executor=EXECUTOR)
 def archive_results_task(inputs_plots: List[File], input_report: File) -> File:
-    output_path = Path("data").joinpath("results.tgz")
-    tar_file = File(str(output_path))
+    output_path = os.path.join(
+        os.path.split(input_report.dirname())[0], "data", f"results.tgz"
+    )
+    tar_file = File(output_path)
     with tar_file.open("wb") as out:
         with tarfile.open(fileobj=out, mode="w|gz") as tar:
             for file_path in inputs_plots + [input_report]:
-                tar.add(file_path.path)
+                tmp_file = file_path.copy_to(File(os.path.basename(file_path.path)))
+                tar.add(tmp_file.path)
     return tar_file
 
 
-@task(version="1")
+@task(version="1", executor=EXECUTOR)
 def main(
-    input_fastas: List[File],
+    input_dir: str,
     amino_acid: str = "C",
     enzyme_regex: str = "[KR]",
     missed_cleavages: int = 0,
     min_length: int = 4,
     max_length: int = 75,
 ) -> List[File]:
+    input_fastas = [File(f) for f in glob_file(f"{input_dir}/*.fasta")]
     peptide_files = [
         digest_protein_task(
             fasta,
