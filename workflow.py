@@ -1,4 +1,5 @@
 """workflow.py"""
+from enum import Enum
 import os
 import re
 import tarfile
@@ -7,11 +8,10 @@ from typing import List, Tuple
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from redun import task, File
-from redun.file import glob_file
+from redun.file import glob_file, get_filesystem_class
 
 
 redun_namespace = "bioinformatics_pipeline_tutorial"
-EXECUTOR = "default"
 
 
 def load_fasta(input_file: File) -> Tuple[str, str]:
@@ -103,11 +103,12 @@ def plot_counts(filename: str, counts: List[str]) -> File:
         title_text="{}'s in Peptides and Amino Acids".format(amino_acid),
         showlegend=False,
     )
-    # If our filename is an S3 path, plotly can't write to it. As a workaround,
-    # we write to a temporary file and copy its content to the output file.
-    tmp_file = File(os.path.basename(filename))
+    if get_filesystem_class(url=filename).name == "s3":
+        tmp_file = File(os.path.basename(filename))
+    else:
+        tmp_file = File(filename)
     fig.write_image(tmp_file.path)
-    output_file = tmp_file.copy_to(File(filename))
+    output_file = tmp_file.copy_to(File(filename), skip_if_exists=True)
     return output_file
 
 
@@ -211,7 +212,7 @@ def get_report(input_files: List[File]) -> List[List[str]]:
     return count_list
 
 
-@task(version="1", executor=EXECUTOR)
+@task(version="1")
 def digest_protein_task(
     input_fasta: File,
     enzyme_regex: str = "[KR]",
@@ -235,7 +236,7 @@ def digest_protein_task(
     return peptides_file
 
 
-@task(version="1", executor=EXECUTOR)
+@task(version="1")
 def count_amino_acids_task(
     input_fasta: File, input_peptides: File, amino_acid: str = "C"
 ) -> File:
@@ -266,7 +267,7 @@ def count_amino_acids_task(
     return aa_count_file
 
 
-@task(version="1", executor=EXECUTOR)
+@task(version="3")
 def plot_count_task(input_count: File) -> File:
     """
     Load the calculated counts and create a plot.
@@ -280,7 +281,7 @@ def plot_count_task(input_count: File) -> File:
     return counts_plot
 
 
-@task(version="1", executor=EXECUTOR)
+@task(version="1")
 def get_report_task(input_counts: List[File]) -> File:
     """
     Get a list of input files from a given folder and create a report.
@@ -293,7 +294,7 @@ def get_report_task(input_counts: List[File]) -> File:
     return report_file
 
 
-@task(version="1", executor=EXECUTOR)
+@task(version="3")
 def archive_results_task(inputs_plots: List[File], input_report: File) -> File:
     output_path = os.path.join(
         os.path.split(input_report.dirname())[0], "data", f"results.tgz"
@@ -302,12 +303,23 @@ def archive_results_task(inputs_plots: List[File], input_report: File) -> File:
     with tar_file.open("wb") as out:
         with tarfile.open(fileobj=out, mode="w|gz") as tar:
             for file_path in inputs_plots + [input_report]:
-                tmp_file = file_path.copy_to(File(os.path.basename(file_path.path)))
-                tar.add(tmp_file.path)
+                if get_filesystem_class(url=file_path.path).name == "s3":
+                    tmp_file = File(os.path.basename(file_path.path))
+                else:
+                    tmp_file = file_path
+                output_file = file_path.copy_to(tmp_file, skip_if_exists=True)
+                tar.add(output_file.path)
     return tar_file
 
 
-@task(version="1", executor=EXECUTOR)
+class Executor(Enum):
+    default = "default"
+    process = "process"
+    batch = "batch"
+    batch_debug = "batch_debug"
+
+
+@task(version="1")
 def main(
     input_dir: str,
     amino_acid: str = "C",
@@ -315,10 +327,11 @@ def main(
     missed_cleavages: int = 0,
     min_length: int = 4,
     max_length: int = 75,
+    executor: Executor = Executor.default,
 ) -> List[File]:
     input_fastas = [File(f) for f in glob_file(f"{input_dir}/*.fasta")]
     peptide_files = [
-        digest_protein_task(
+        digest_protein_task.options(executor=executor.value)(
             fasta,
             enzyme_regex=enzyme_regex,
             missed_cleavages=missed_cleavages,
@@ -328,10 +341,17 @@ def main(
         for fasta in input_fastas
     ]
     aa_count_files = [
-        count_amino_acids_task(fasta, peptides, amino_acid=amino_acid)
+        count_amino_acids_task.options(executor=executor.value)(
+            fasta, peptides, amino_acid=amino_acid
+        )
         for (fasta, peptides) in zip(input_fastas, peptide_files)
     ]
-    count_plots = [plot_count_task(aa_count) for aa_count in aa_count_files]
-    report_file = get_report_task(aa_count_files)
-    results_archive = archive_results_task(count_plots, report_file)
+    count_plots = [
+        plot_count_task.options(executor=executor.value)(aa_count)
+        for aa_count in aa_count_files
+    ]
+    report_file = get_report_task.options(executor=executor.value)(aa_count_files)
+    results_archive = archive_results_task.options(executor=executor.value)(
+        count_plots, report_file
+    )
     return results_archive
