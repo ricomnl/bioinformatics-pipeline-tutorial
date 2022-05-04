@@ -10,5 +10,5 @@ pip install -r requirements.txt
 
 Launch a workflow:
 ```bash
-redun run workflow.py main --input-fastas fasta/*.fasta
+redun run workflow.py main --input-dir fasta/
 ```
