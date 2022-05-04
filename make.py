@@ -70,7 +70,7 @@ def match_target(target: str = "all", rules: dict = rules) -> Optional[Dict[str,
     return rule
 
 
-@task()
+@task(version="1")
 def run_command(command: str, inputs: List[File], output_path: str) -> File:
     """
     Run a shell command to produce a target.
@@ -80,12 +80,12 @@ def run_command(command: str, inputs: List[File], output_path: str) -> File:
     return File(output_path)
 
 
-@task()
+@task(version="1")
 def make(target: str = "all", rules: dict = rules) -> Optional[File]:
     """
     Make a target (file) using a series of rules.
     """
-    rule = match_target(target, rules)
+    rule = match_target(target, rules) if not "%" in target else None
     if not rule:
         # No rule. See if target already exists.
         file = File(target)
