@@ -11,7 +11,7 @@ from redun import task, File
 from redun.file import glob_file, get_filesystem_class
 
 
-redun_namespace = "bioinformatics_pipeline_tutorial"
+redun_namespace = "bioinformatics_pipeline_tutorial.workflow"
 
 
 def load_fasta(input_file: File) -> Tuple[str, str]:
