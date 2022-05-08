@@ -1,4 +1,4 @@
-"""make.py"""
+"""make_workflow.py"""
 import os
 from typing import Dict, List, Optional
 
@@ -6,7 +6,7 @@ from redun import task, File
 from redun.functools import const
 
 
-redun_namespace = "make_example"
+redun_namespace = "bioinformatics_pipeline_tutorial.make_workflow"
 
 
 COUNT = ["data/KLF4.count.tsv", "data/MYC.count.tsv", "data/PO5F1.count.tsv", "data/SOX2.count.tsv"]

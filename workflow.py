@@ -14,7 +14,7 @@ from bioinformatics_pipeline_tutorial.lib import (
 )
 
 
-redun_namespace = "bioinformatics_pipeline_tutorial"
+redun_namespace = "bioinformatics_pipeline_tutorial.workflow"
 
 
 class Executor(Enum):
