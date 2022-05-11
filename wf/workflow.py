@@ -23,7 +23,7 @@ class Executor(Enum):
     batch_debug = "batch_debug"
 
 
-@task(version="1")
+@task(version="0.0.1", config_args=["executor"])
 def main(
     input_dir: str,
     amino_acid: str = "C",
@@ -34,8 +34,9 @@ def main(
     executor: Executor = Executor.default,
 ) -> List[File]:
     input_fastas = [File(f) for f in glob_file(f"{input_dir}/*.fasta")]
+    task_options = dict(executor=executor.value)
     peptide_files = [
-        digest_protein_task.options(executor=executor.value)(
+        digest_protein_task.options(**task_options)(
             fasta,
             enzyme_regex=enzyme_regex,
             missed_cleavages=missed_cleavages,
@@ -45,17 +46,16 @@ def main(
         for fasta in input_fastas
     ]
     aa_count_files = [
-        count_amino_acids_task.options(executor=executor.value)(
+        count_amino_acids_task.options(**task_options)(
             fasta, peptides, amino_acid=amino_acid
         )
         for (fasta, peptides) in zip(input_fastas, peptide_files)
     ]
     count_plots = [
-        plot_count_task.options(executor=executor.value)(aa_count)
-        for aa_count in aa_count_files
+        plot_count_task.options(**task_options)(aa_count) for aa_count in aa_count_files
     ]
-    report_file = get_report_task.options(executor=executor.value)(aa_count_files)
-    results_archive = archive_results_task.options(executor=executor.value)(
+    report_file = get_report_task.options(**task_options)(aa_count_files)
+    results_archive = archive_results_task.options(**task_options)(
         count_plots, report_file
     )
     return results_archive

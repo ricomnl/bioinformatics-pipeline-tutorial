@@ -84,7 +84,7 @@ def match_target(target: str = "all", rules: dict = rules) -> Optional[Dict[str,
     return rule
 
 
-@task(version="1")
+@task()
 def run_command(command: str, inputs: List[File], output_path: str) -> File:
     """
     Run a shell command to produce a target.
@@ -94,7 +94,7 @@ def run_command(command: str, inputs: List[File], output_path: str) -> File:
     return File(output_path)
 
 
-@task(version="1")
+@task()
 def make(target: str = "all", rules: dict = rules) -> Optional[File]:
     """
     Make a target (file) using a series of rules.

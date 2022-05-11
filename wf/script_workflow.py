@@ -8,7 +8,7 @@ from redun.file import glob_file
 redun_namespace = "bioinformatics_pipeline_tutorial.script_workflow"
 
 
-@task(version="1")
+@task()
 def digest_protein_task(
     input_fasta: File,
     enzyme_regex: str = "[KR]",
@@ -34,7 +34,7 @@ def digest_protein_task(
     )
 
 
-@task(version="1")
+@task()
 def count_amino_acids_task(
     input_fasta: File, input_peptides: File, amino_acid: str = "C"
 ) -> File:
@@ -58,7 +58,7 @@ def count_amino_acids_task(
     )
 
 
-@task(version="1")
+@task()
 def plot_count_task(input_count: File) -> File:
     """
     Load the calculated counts and create a plot.
@@ -77,7 +77,7 @@ def plot_count_task(input_count: File) -> File:
     )
 
 
-@task(version="1")
+@task()
 def get_report_task(input_counts: List[File]) -> File:
     """
     Get a list of input files from a given folder and create a report.
@@ -95,7 +95,7 @@ def get_report_task(input_counts: List[File]) -> File:
     )
 
 
-@task(version="1")
+@task()
 def archive_results_task(inputs_plots: List[File], input_report: File) -> File:
     output_path = os.path.join(
         os.path.split(input_report.dirname())[0], "data", f"results.tgz"
@@ -112,7 +112,7 @@ def archive_results_task(inputs_plots: List[File], input_report: File) -> File:
     )
 
 
-@task(version="1")
+@task()
 def main(
     input_dir: str,
     amino_acid: str = "C",
