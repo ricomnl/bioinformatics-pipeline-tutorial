@@ -2,9 +2,8 @@
 import os
 from typing import List
 
-from redun import task, File, script
+from redun import File, script, task
 from redun.file import glob_file
-
 
 redun_namespace = "bioinformatics_pipeline_tutorial.script_workflow"
 
@@ -134,17 +133,10 @@ def main(
         for fasta in input_fastas
     ]
     aa_count_files = [
-        count_amino_acids_task(
-            fasta, peptides, amino_acid=amino_acid
-        )
+        count_amino_acids_task(fasta, peptides, amino_acid=amino_acid)
         for (fasta, peptides) in zip(input_fastas, peptide_files)
     ]
-    count_plots = [
-        plot_count_task(aa_count)
-        for aa_count in aa_count_files
-    ]
+    count_plots = [plot_count_task(aa_count) for aa_count in aa_count_files]
     report_file = get_report_task(aa_count_files)
-    results_archive = archive_results_task(
-        count_plots, report_file
-    )
+    results_archive = archive_results_task(count_plots, report_file)
     return results_archive

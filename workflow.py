@@ -2,17 +2,16 @@
 from enum import Enum
 from typing import List
 
-from redun import task, File
+from redun import File, task
 from redun.file import glob_file
 
 from bioinformatics_pipeline_tutorial.lib import (
-    digest_protein_task,
-    count_amino_acids_task,
-    plot_count_task,
-    get_report_task,
     archive_results_task,
+    count_amino_acids_task,
+    digest_protein_task,
+    get_report_task,
+    plot_count_task,
 )
-
 
 redun_namespace = "bioinformatics_pipeline_tutorial.workflow"
 

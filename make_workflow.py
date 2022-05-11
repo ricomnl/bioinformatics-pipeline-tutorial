@@ -2,15 +2,24 @@
 import os
 from typing import Dict, List, Optional
 
-from redun import task, File
+from redun import File, task
 from redun.functools import const
-
 
 redun_namespace = "bioinformatics_pipeline_tutorial.make_workflow"
 
 
-COUNT = ["data/KLF4.count.tsv", "data/MYC.count.tsv", "data/PO5F1.count.tsv", "data/SOX2.count.tsv"]
-PLOT = ["data/KLF4.plot.png", "data/MYC.plot.png", "data/PO5F1.plot.png", "data/SOX2.plot.png"]
+COUNT = [
+    "data/KLF4.count.tsv",
+    "data/MYC.count.tsv",
+    "data/PO5F1.count.tsv",
+    "data/SOX2.count.tsv",
+]
+PLOT = [
+    "data/KLF4.plot.png",
+    "data/MYC.plot.png",
+    "data/PO5F1.plot.png",
+    "data/SOX2.plot.png",
+]
 
 
 # Custom DSL for describing targets, dependencies (deps), and commands.
@@ -23,19 +32,21 @@ rules = {
     },
     "data/%.peptides.txt": {
         "deps": ["fasta/%.fasta"],
-        "command": "bin/01_digest_protein.py fasta/%.fasta data/%.peptides.txt"
+        "command": "bin/01_digest_protein.py fasta/%.fasta data/%.peptides.txt",
     },
     "data/%.count.tsv": {
         "deps": ["fasta/%.fasta", "data/%.peptides.txt"],
-        "command": "bin/02_count_amino_acids.py fasta/%.fasta data/%.peptides.txt data/%.count.tsv"
+        "command": "bin/02_count_amino_acids.py fasta/%.fasta data/%.peptides.txt data/%.count.tsv",
     },
     "data/%.plot.png": {
         "deps": ["data/%.count.tsv"],
-        "command": "bin/03a_plot_count.py data/%.count.tsv data/%.plot.png"
+        "command": "bin/03a_plot_count.py data/%.count.tsv data/%.plot.png",
     },
     "data/protein_report.tsv": {
         "deps": COUNT,
-        "command": "bin/03b_get_report.py {COUNT} --output_file=data/protein_report.tsv".format(COUNT=" ".join(COUNT))
+        "command": "bin/03b_get_report.py {COUNT} --output_file=data/protein_report.tsv".format(
+            COUNT=" ".join(COUNT)
+        ),
     },
     "data/results.tgz": {
         "deps": PLOT + ["data/protein_report.tsv"],
@@ -43,14 +54,16 @@ rules = {
                       mkdir results
                       cp {PLOT} data/protein_report.tsv results/
                       tar -czf data/results.tgz results
-                      rm -r results""".format(PLOT=" ".join(PLOT))
+                      rm -r results""".format(
+            PLOT=" ".join(PLOT)
+        ),
     },
 }
 
 
 def match_target(target: str = "all", rules: dict = rules) -> Optional[Dict[str, Dict]]:
     """
-    Emulate GNU make pattern matching described here: 
+    Emulate GNU make pattern matching described here:
     https://www.gnu.org/software/make/manual/html_node/Pattern-Match.html#Pattern-Match
     """
     rule = rules.get(target)
@@ -58,10 +71,11 @@ def match_target(target: str = "all", rules: dict = rules) -> Optional[Dict[str,
         _, tbase = os.path.split(target)
         for rkey, rval in rules.items():
             _, rbase = os.path.split(rkey)
-            if not "%" in rbase: continue
+            if not "%" in rbase:
+                continue
             pre, post = rbase.split("%")
             if tbase.startswith(pre) and tbase.endswith(post):
-                stem = tbase[len(pre):-len(post)]
+                stem = tbase[len(pre) : -len(post)]
                 rule = {
                     "deps": [dep.replace("%", stem) for dep in rval.get("deps", [])],
                     "command": rval.get("command", "").replace("%", stem),
@@ -94,10 +108,7 @@ def make(target: str = "all", rules: dict = rules) -> Optional[File]:
         return file
 
     # Recursively make dependencies.
-    inputs = [
-        make(dep, rules=rules)
-        for dep in rule.get("deps", [])
-    ]
+    inputs = [make(dep, rules=rules) for dep in rule.get("deps", [])]
 
     # Run command, if needed.
     if "command" in rule:
