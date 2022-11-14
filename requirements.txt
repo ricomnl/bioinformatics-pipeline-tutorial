@@ -1,3 +1,4 @@
 redun
-plotly
+plotly==5.8
+orjson==3.5.4
 kaleido
